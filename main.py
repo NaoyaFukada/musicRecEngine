@@ -1,61 +1,37 @@
-import requests
-import urllib.parse
-from config import TokenManager
+from spotify_client import SpotifyClient
+from music_graph import MusicGraph
 
-def get_artist_song_id(track_name, artist_name=None, market="US", limit = 1):
+track_name = "We Are Never Ever Getting Back Together"
+artist_name = "Taylor Swift"
+market = "US"
 
-    # Instantiate the TokenManager
-    token_manager = TokenManager()
+# Instantiate Spotify client
+spotify_client = SpotifyClient()
+music_graph= MusicGraph()
 
-    # Get the access token
-    access_token = token_manager.get_access_token()
+# Search for a song (Example)
+search_song_results = spotify_client.search_song(track_name, artist_name, market, limit=5)
 
-    # Print the token
-    print("Access Token:", access_token)
+searched_track = None
+popular_track_lists_by_artist = None
 
-    BASE_URL = "https://api.spotify.com/v1/search"
+for result in search_song_results:
+    if result["track_name"] == track_name and result["artist_name"] == artist_name:
+        searched_track = result
+        print("search_track", searched_track)
+        music_graph.add_a_track(searched_track)
+        break
 
-    # Constructing query parameters
-    query = f"track:{track_name} artist:{artist_name}"
-    if artist_name == None:
-        query = f"track:{track_name}"
-    encoded_query = urllib.parse.quote_plus(query)
-
-    url = f"{BASE_URL}?q={encoded_query}&type=track&market={market}&limit={limit}"
-
-    print("url", url)
-
-    # Headers for authorization
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-
-    # Make the GET request
-    response = requests.get(url, headers=headers)
-
-    # Parse JSON response
-    data = response.json()
-
-    if "tracks" in data and "items" in data["tracks"] and data["tracks"]["items"]:
-        track = data["tracks"]["items"][0]
-        track_id = track["id"]
-        track_name = track["name"]
-        track_url = track["external_urls"]['spotify']
-        artist_id = track["artists"][0]["id"]
-        artist_name = track["artists"][0]["name"]
+if searched_track:
+   popular_track_lists_by_artist = spotify_client.get_popular_songs_by_artist(searched_track["artist_id"], market)
+   if searched_track not in popular_track_lists_by_artist:
+       popular_track_lists_by_artist.append(searched_track)
+       music_graph.add_tracks(popular_track_lists_by_artist)
+       music_graph.set_weight_by_spotify(popular_track_lists_by_artist)
 
 
-        print(f"Track ID: {track_id}")
-        print(f"Track Name: {track_id}")
-        print(f"Track URL: {track_url}")
-        print(f"Artist ID: {artist_id}")
-        print(f"Artist Name: {artist_name}")
-    else:
-        print("No track found")
 
-    return track_id, artist_id
 
-print(get_artist_song_id("Best Friend", "Rex Orange County"))
+
 
 

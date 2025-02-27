@@ -7,7 +7,7 @@ class SpotifyClient:
         """Initialize SpotifyClient and set up TokenManager."""
         self.token_manager = TokenManager()
     
-    def search_song(self, track_name, artist_name=None, market="US", limit=5):
+    def search_song(self, track_name = None, artist_name=None, market="US", limit=5):
         """Search for songs on Spotify and return track details."""
 
         # Get the access token
@@ -16,7 +16,9 @@ class SpotifyClient:
         BASE_URL = "https://api.spotify.com/v1/search"
 
         # Construct query parameters
-        query = f"track:{track_name}"
+        query = ""
+        if track_name:
+            query += f"track:{track_name}"
         if artist_name:
             query += f" artist:{artist_name}"
 
@@ -51,6 +53,7 @@ class SpotifyClient:
                     "track_id": track["id"],
                     "track_name": track["name"],
                     "track_url": track["external_urls"]['spotify'],
+                    "popularity": track["popularity"],
                     "artist_id": track["artists"][0]["id"],
                     "artist_name": track["artists"][0]["name"]
                 }
@@ -64,6 +67,7 @@ class SpotifyClient:
                 print(f"Track ID: {song['track_id']}")
                 print(f"Track Name: {song['track_name']}")
                 print(f"Track URL: {song['track_url']}")
+                print(f"Popularity: {song['popularity']}")
                 print(f"Artist ID: {song['artist_id']}")
                 print(f"Artist Name: {song['artist_name']}")
 
@@ -104,38 +108,31 @@ class SpotifyClient:
 
         # Ensure tracks exist before processing
         if "tracks" in data and data["tracks"]:
-            results = [
+            popular_track_lists_by_artist = [
                 {
                     "track_id": track["id"],
                     "track_name": track["name"],
                     "track_url": track["external_urls"]['spotify'],
-                    "popularity": track["popularity"]
+                    "popularity": track["popularity"],
+                    "artist_id": track["artists"][0]["id"],
+                    "artist_name": track["artists"][0]["name"]
                 }
                 for track in data["tracks"]
             ]
 
             # Print results
             print("\n🔥 Top Tracks:")
-            for idx, song in enumerate(results, start=1):
+            for idx, song in enumerate(popular_track_lists_by_artist, start=1):
                 print(f"\nResult {idx}:")
                 print(f"Track ID: {song['track_id']}")
                 print(f"Track Name: {song['track_name']}")
                 print(f"Track URL: {song['track_url']}")
                 print(f"Popularity: {song['popularity']}")
+                print(f"Artist ID: {song['artist_id']}")
+                print(f"Artist Name: {song['artist_name']}")
 
-            return results
+            return popular_track_lists_by_artist
         
         else:
             print("⚠️ No top tracks found.")
             return []
-
-# Instantiate Spotify client
-spotify_client = SpotifyClient()
-
-# Search for a song (Example)
-results = spotify_client.search_song("We are never ever getting back together", None, "JP", limit=3)
-
-# Get top tracks for an artist (Example)
-if results:
-    artist_id = results[0]["artist_id"]
-    top_songs = spotify_client.get_popular_songs_by_artist(artist_id, "JP")
