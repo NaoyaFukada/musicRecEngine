@@ -10,8 +10,8 @@ class SpotifyClient:
     def search_song(self, track_name = None, artist_name=None, market="US", limit=5):
         """Search for songs on Spotify and return track details."""
 
-        # Get the access token
-        access_token = self.token_manager.get_access_token()
+        # Get the spotify access token
+        spotify_access_token = self.token_manager.get_access_token()
 
         BASE_URL = "https://api.spotify.com/v1/search"
 
@@ -32,7 +32,7 @@ class SpotifyClient:
 
         # Headers for authorization
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {spotify_access_token}",
             "Content-Type": "application/json"
         }
 
@@ -45,10 +45,10 @@ class SpotifyClient:
             return []
 
         # Parse JSON response
-        data = response.json()
+        json_data = response.json()
 
-        if "tracks" in data and "items" in data["tracks"] and data["tracks"]["items"]:
-            results = [
+        if "tracks" in json_data and "items" in json_data["tracks"] and json_data["tracks"]["items"]:
+            tracks_details = [
                 {
                     "track_id": track["id"],
                     "track_name": track["name"],
@@ -57,12 +57,12 @@ class SpotifyClient:
                     "artist_id": track["artists"][0]["id"],
                     "artist_name": track["artists"][0]["name"]
                 }
-                for track in data["tracks"]["items"]
+                for track in json_data["tracks"]["items"]
             ]
 
             # Print results
             print("\n🎵 Search Results:")
-            for idx, song in enumerate(results, start=1):
+            for idx, song in enumerate(tracks_details, start=1):
                 print(f"\nResult {idx}:")
                 print(f"Track ID: {song['track_id']}")
                 print(f"Track Name: {song['track_name']}")
@@ -71,7 +71,7 @@ class SpotifyClient:
                 print(f"Artist ID: {song['artist_id']}")
                 print(f"Artist Name: {song['artist_name']}")
 
-            return results  # Return all track details as a list
+            return tracks_details  # Return all track details as a list
         
         else:
             print("⚠️ No track found.")
@@ -81,7 +81,7 @@ class SpotifyClient:
         """Get the most popular songs of an artist."""
 
         # Get the access token
-        access_token = self.token_manager.get_access_token()
+        spotify_access_token = self.token_manager.get_access_token()
 
         url = f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?market={market}"
 
@@ -91,7 +91,7 @@ class SpotifyClient:
 
         # Headers for authorization
         headers = {
-            "Authorization": f"Bearer {access_token}",
+            "Authorization": f"Bearer {spotify_access_token}",
             "Content-Type": "application/json"
         }
 
@@ -104,10 +104,10 @@ class SpotifyClient:
             return []
 
         # Parse JSON response
-        data = response.json()
+        json_data = response.json()
 
         # Ensure tracks exist before processing
-        if "tracks" in data and data["tracks"]:
+        if "tracks" in json_data and json_data["tracks"]:
             popular_track_lists_by_artist = [
                 {
                     "track_id": track["id"],
@@ -117,7 +117,7 @@ class SpotifyClient:
                     "artist_id": track["artists"][0]["id"],
                     "artist_name": track["artists"][0]["name"]
                 }
-                for track in data["tracks"]
+                for track in json_data["tracks"]
             ]
 
             # Print results
