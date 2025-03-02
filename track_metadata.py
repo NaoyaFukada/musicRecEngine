@@ -17,7 +17,7 @@ class TrackMetaData:
         
         # Attempt to load existing track metadata from the file.
         # If the file doesn't exist, an empty file will be created.
-        self._load_file()
+        self.metadata_dict = self._load_file()
 
     def get(self, track_id):
         """
@@ -72,10 +72,12 @@ class TrackMetaData:
     def _load_file(self):
         """
         Loads track metadata from the JSON file.
-        
-        - If the file does not exist, it creates an empty JSON file.
-        - If the file exists but is empty or invalid, an error message is printed and the program exits.
-        - The loaded metadata is stored in self.metadata_dict as a defaultdict.
+
+        - If the file does not exist, it creates an empty JSON file and returns an empty metadata dictionary.
+        - If the file exists, it attempts to load and return the metadata.
+        - If the file contains invalid JSON, the program exits with an error message.
+    
+        :return: A defaultdict containing track metadata.
         """
         # Check if the metadata file exists.
         if not os.path.exists(self.file_name):
@@ -85,7 +87,7 @@ class TrackMetaData:
             # Create an empty JSON file
             with open(self.file_name, "w") as file:
                 json.dump({}, file, indent=4)
-            return
+            return defaultdict(dict)
         
         try:
             # Open and read the JSON file.
@@ -93,7 +95,7 @@ class TrackMetaData:
                 # Reads JSON data from a file and converts it to Python Dictionary
                 track_metadata = json.load(file)
                 # Convert loaded dictionary into a defaultdict.
-                self.metadata_dict = defaultdict(dict, track_metadata)
+                return defaultdict(dict, track_metadata)
             print("✅ Track metadata successfully loaded from file.")
         except Exception as e:
             # If any error occurs (e.g., invalid JSON), exit the program.

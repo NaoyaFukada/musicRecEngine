@@ -4,6 +4,7 @@ import os
 import itertools
 import math
 from track_metadata import TrackMetaData
+import heapq
 
 class MusicGraph:
     def __init__(self, file_name = "data/music_graph.json"):
@@ -18,7 +19,7 @@ class MusicGraph:
         """
         self.file_name = file_name
         # Load the graph data from file into self.graph_dict
-        self._load_file()
+        self.graph_dict = self._load_file()
 
         # Set to store track IDs that are marked as favorites by the user.
         self.fav_tracks_set = set()
@@ -118,14 +119,81 @@ class MusicGraph:
         # Add the new favorite track ID to the favorites set.
         self.fav_tracks_set.add(new_fav_track_id)
             
+    def dfs_recommendation(self, start_track_id, max_depth=3, top_k=10):
+        """
+        Performs Depth-First Search (DFS) up to max_depth, using a max heap to track top-k recommendations.
+        
+        - Chooses the **minimum weight** along each path (to avoid overly strong biases).
+        - If multiple tracks have the same weight, **prefers shallower depth**.
+        - Maintains only the **top `k` strongest recommendations** using a max heap.
+
+        :param start_track_id: The starting track ID for DFS.
+        :param max_depth: The maximum depth to traverse.
+        :param top_k: The number of top recommendations to return.
+        :return: A list of the top-k recommended tracks.
+        """
+        if start_track_id not in self.graph_dict:
+            print("⚠️ Track not found in the graph.")
+            return []
+    
+        visited = set()
+        max_heap = []
+
+        def dfs(current_track_id, depth, min_weight):
+            if depth > max_depth:
+                return 
+            
+            visited.add(current_track_id)
+
+            for neighbor_id, weight in self.graph_dict[current_track_id].items():
+                if neighbor_id not in visited:
+                    # Use the minimum weight encountered along this path
+                    new_weight = min(min_weight, weight)
+
+                    # **Pruning: Stop exploring if the weight is too weak**
+                    if len(max_heap) == top_k and new_weight <= -max_heap[0][0]:
+                        continue  # Skip this path (not strong enough)
+
+                    # Push the track into the max heap (negative weight since heapq is a min-heap)
+                    heapq.heappush(max_heap, (-new_weight, depth, neighbor_id))
+
+                    # Keep heap size limited to `top_k` elements
+                    if len(max_heap) > top_k:
+                        heapq.heappop(max_heap)
+
+                    # Recursive DFS call
+                    dfs(neighbor_id, depth + 1, new_weight)
+
+            # Remove from visited set for other paths
+            visited.remove(current_track_id)
+
+        # Start DFS with infinite initial weight
+        dfs(start_track_id, depth=1, min_weight=float('inf'))
+
+        # Convert max heap to sorted list (descending order by weight)
+        return sorted(
+            [(track_id, -weight, depth) for weight, depth, track_id in max_heap],
+            key=lambda x: (-x[1], x[2])  # Sort by weight (desc), then depth (asc)
+        )
+
+
+                    
+
+
+
+
+
+        
 
     def _load_file(self):
         """
         Loads the graph structure from a JSON file.
 
-        - If the file does not exist, creates an empty file.
-        - If the file exists, loads its data into self.graph_dict using defaultdict for safe access.
+        - If the file does not exist, creates an empty file and returns an empty graph.
+        - If the file exists, loads its data into a dictionary and returns it.
         - Exits the program if an error occurs during loading.
+
+        :return: A dictionary representing the graph structure.
         """
         if not os.path.exists(self.file_name):
             print("⚠️ No existing music graph file found. Creating a new file.")
@@ -133,14 +201,14 @@ class MusicGraph:
             # Create an empty JSON file
             with open(self.file_name, "w") as file:
                 json.dump({}, file, indent=4)
-            return
+            return defaultdict(dict)
         
         try:
             with open(self.file_name, "r") as file:
                 # Read JSON data from the file.
                 graph_data = json.load(file)
                 # Initialize self.graph_dict as a defaultdict with the loaded data.
-                self.graph_dict = defaultdict(dict, graph_data)
+                return defaultdict(dict, graph_data)
             print("✅ Graph successfully loaded from file.")
         except Exception as e:
             raise SystemExit(f"Exiting program due to some issues while loading the music graph file: {e}")
